@@ -186,8 +186,9 @@ PHASES = [
             {"key": "input",      "label": "Fichero VTP de entrada (.vtp)", "type": "path",   "default": "input.vtp", "depends_on": {"phase": "05", "key": "outputDir"}},
             {"key": "outName",    "label": "Nombre base de salida (sin extensión)", "type": "text",   "default": "resultado", "depends_on": {"phase": "__global__", "key": "outName"}},
             {"key": "outputDir",  "label": "Directorio de salida", "type": "path",   "default": ".", "depends_on": {"phase": "__global__", "key": "outputDir"}},
-            {"key": "low_field_limits",  "label": "Limite inferior para el valor del punto crítico (-1 es para no aplicar filtro)", "type": "number", "default": -1, "min": -1, "max": 9999},
-            {"key": "upper_field_limits",  "label": "Limite superior para el valor del punto crítico (-1 es para no aplicar filtro)", "type": "number", "default": -1, "min": -1, "max": 9999}
+            {"key": "interactive",   "label": "¿Seleccionar de forma interactiva el filtro de valor?",   "type": "bool",   "default": False},
+            {"key": "low_field_limits",  "label": "Limite inferior para el valor del punto crítico (-1 es para no aplicar filtro)", "type": "number", "default": -1, "min": -1, "max": 9999, "show_if": {"key": "interactive", "equals": False}},
+            {"key": "upper_field_limits",  "label": "Limite superior para el valor del punto crítico (-1 es para no aplicar filtro)", "type": "number", "default": -1, "min": -1, "max": 9999, "show_if": {"key": "interactive", "equals": False}}
         ],
     },
     {
@@ -358,6 +359,15 @@ def ask_params(phase, all_params=None, selected_ids=None):
  
     # Preguntar el resto
     for param in to_ask:
+        show_if = param.get("show_if")
+        if show_if:
+            show_key = show_if["key"]
+            show_val = show_if["equals"]
+            # El valor puede estar ya resuelto en esta misma fase
+            if values.get(show_key, show_val) != show_val:
+                # No se cumple la condición → saltar con el default
+                values[param["key"]] = param["default"]
+                continue
         key     = param["key"]
         label   = param["label"]
         ptype   = param["type"]
@@ -514,6 +524,7 @@ def run_phase(phase, all_params, params, index, total):
             input     = params["input"],
             outputName   = params["outName"],
             outputDir = params["outputDir"],
+            interactive = params["interactive"],
             field_limits = field_limits
         )
         params["result"] = result
