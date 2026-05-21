@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "auto-cryoet"
+version = "0.1.0"
+description = "Different tools to automate cryo-et tomogram analysis"
+requires-python = ">=3.8"
+dependencies = [
+    "questionary",
+    "coloredlogs",
+    "vtk",
+    "fitsio"
+]
+
+[tool.setuptools]
+script-files = [
+    "src/cluster_points.py",
+    "src/convert_disperse.py",
+    "src/create_mrc.py",
+    "src/filter_manifolds.py",
+    "src/filter_maxpoints.py",
+    "src/obtain_classes.py",
+    "src/recover_point_from_img.py",
+    "src/show_manifolds.py",
+    "src/create_mrc.py",
+    "src/tomotwin_analysis.py",
+    "src/tomotwin_umap.py",
+    "src/auto-cryoet-workflow.py",
+]

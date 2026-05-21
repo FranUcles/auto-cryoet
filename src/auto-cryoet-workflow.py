@@ -5,7 +5,7 @@
 ║   CLI interactivo con fases modulares    ║
 ╚══════════════════════════════════════════╝
 Hay que tener instalado el entorno y la suite de TomoTwin y DESPUÉS instalar también:
-Dependencias: conda install questionary coloredlogs mrcfile vtk fitsio conda-forge::disperse
+Dependencias: conda install questionary coloredlogs vtk fitsio conda-forge::disperse
 """
 
 import time
