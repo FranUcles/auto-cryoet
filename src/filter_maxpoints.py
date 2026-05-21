@@ -118,16 +118,16 @@ def render_screenshot(filtered_polydata, output_path: str,
     cy = (bounds[2] + bounds[3]) / 2
     cam.SetPosition(cx, cy, 1)
     cam.SetFocalPoint(cx, cy, 0)
-    cam.SetViewUp(-1, 0, 0)
+    cam.SetViewUp(0, 1, 0)
     renderer.ResetCamera()
-
+    
     # Render offscreen
     render_window = vtk.vtkRenderWindow()
     render_window.SetOffScreenRendering(1)
     render_window.SetSize(1280, 960)
     render_window.AddRenderer(renderer)
     render_window.Render()
-
+    
     # Guardar PNG
     w2i = vtk.vtkWindowToImageFilter()
     w2i.SetInput(render_window)
@@ -137,7 +137,7 @@ def render_screenshot(filtered_polydata, output_path: str,
     writer.SetFileName(output_path)
     writer.SetInputConnection(w2i.GetOutputPort())
     writer.Write()
-
+    
     render_window.Finalize()
     
 def filter_max(points_path):

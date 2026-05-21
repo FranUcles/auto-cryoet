@@ -48,7 +48,7 @@ def main(input, chunk_size = 4000, fit_sample_size = 4000, outputDir=".", debug=
     subprocess.run(["tomotwin_tools.py", "umap", "-i", input, "-n", "2", "--chunk_size", str(chunk_size), "--fit_sample_size", str(fit_sample_size), "-o", outputDir], check=True)
     logger.info("Tomogram processed!")
     inputfilename = Path(input).stem
-    result = outputDirPath / (inputfilename + ".tumap")
+    result = outputDirPath / (str(inputfilename) + ".tumap")
     return str(result.resolve())
 
 if __name__ == "__main__":

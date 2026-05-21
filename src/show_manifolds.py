@@ -57,7 +57,7 @@ def load_img(imgPath) -> np.ndarray:
 
 def save_img(img_arr, path: str):
     Image.fromarray(img_arr).save(path)
-
+    
 def main(inputDir, referenceImg, outName, outputDir=".", debug=False, quiet=False, no_logs=False):
     os.makedirs(outputDir, exist_ok=True)
     configure_logging(debug, quiet, no_logs)
@@ -72,20 +72,23 @@ def main(inputDir, referenceImg, outName, outputDir=".", debug=False, quiet=Fals
     # Load the image
     logger.info("Loading the image...")
     arr = load_img(referenceImg)
+    # Flip de Y-axis to match the coordinates
+    arr = np.flipud(arr)
     heigh, width = arr.shape[:2]
     logger.info("Image loaded!")
     logger.info("Plotting the manifolds...")
     for df, color in zip(dfs, colors):
         # Obtain all the coordinates
-        x = df["umap_1"].to_numpy(dtype=np.int32)
-        y = df["umap_0"].to_numpy(dtype=np.int32)
-
+        x = df["umap_0"].to_numpy(dtype=np.int32)
+        y = df["umap_1"].to_numpy(dtype=np.int32)
         # Filter those out-bounds points
         mask = (y >= 0) & (y < heigh) & (x >= 0) & (x < width)
         arr[y[mask], x[mask]] = color
     logger.info("Manifolds plotted!")
     outputPath = Path(outputDir) / (outName + ".png")
     logger.info("Saving the image...")
+    # Revert the Y-axis flip to recover the original points
+    arr = np.flipud(arr)
     # Save the image
     save_img(arr, str(outputPath.resolve()))
     logger.info("Image saved!")

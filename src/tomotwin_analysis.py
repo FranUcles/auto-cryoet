@@ -47,7 +47,7 @@ def main(input, model, batch = 256, stride = 256, outputDir=".", debug=False, qu
     logger.info("Processing the tomogram...")
     subprocess.run(["tomotwin_embed.py", "tomogram", "-m", model, "-v", input, "-b", str(batch), "-s", str(stride), "-o", outputDir], check=True)
     logger.info("Tomogram processed!")
-    result = outputDirPath / (input + "_embeddings.temb")
+    result = outputDirPath / (str(Path(input).stem) + "_embeddings.temb")
     return str(result.resolve())
 
 if __name__ == "__main__":

@@ -12,7 +12,8 @@ def parse_args():
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug logs")
     parser.add_argument("-q", "--quiet", action="store_true", help="Show only errors")
     parser.add_argument("--no-logs", action="store_true", help="Disable all logs")
-    parser.add_argument("-i", "--input", type=str, required=True, help="Input TomoTwin output file")
+    parser.add_argument("-i", "--input", type=str, required=True, help="Image file")
+    parser.add_argument("-m", "--mask", type=str, required=True, help="Mask file")
     parser.add_argument("-o", "--outputDir", type=str, default=None, help="Output directory")
     parser.add_argument("--cut", type=float, required=True, help="Persistence cut")
     parser.add_argument("--manifolds", type=str, required=True, help="Dumpmanifolds values")
@@ -39,7 +40,7 @@ def configure_logging(debug, quiet, no_logs):
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-def main(input, cut, manifolds, outName, loadMSC = None, outputDir=".", debug=False, quiet=False, no_logs=False) -> tuple[str, str]:
+def main(input, mask, cut, manifolds, outName, loadMSC = None, outputDir=".", debug=False, quiet=False, no_logs=False) -> tuple[str, str]:
     configure_logging(debug, quiet, no_logs)
     outputDirPath = Path(outputDir)
     outputDirPath.mkdir(parents=True, exist_ok=True)
@@ -48,7 +49,7 @@ def main(input, cut, manifolds, outName, loadMSC = None, outputDir=".", debug=Fa
     loadMSC_args = []
     if loadMSC is not None:
         loadMSC_args = ["-loadMSC", loadMSC]
-    subprocess.run(["mse", input, "-outName", outName, "-upSkl", "-vertexAsMinima" ,"-cut", str(cut), "-dumpManifolds", manifolds, "-outDir", outputDir] + loadMSC_args, check=True)
+    subprocess.run(["mse", input, "-mask", mask, "-outName", outName, "-upSkl", "-vertexAsMinima" ,"-cut", str(cut), "-dumpManifolds", manifolds, "-outDir", outputDir] + loadMSC_args, check=True)
     logger.info("MSE applied!")
     cut_suffix = ""
     if cut != 0:

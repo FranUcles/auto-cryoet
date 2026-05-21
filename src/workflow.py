@@ -10,7 +10,6 @@ Dependencias: conda install questionary coloredlogs mrcfile vtk fitsio conda-for
 
 import time
 import sys
-import random
 from pathlib import Path
 from datetime import datetime
 import cluster_points as cloudpoints
@@ -136,9 +135,16 @@ PHASES = [
             {"key": "input", "label": "Fichero UMAP de entrada (.tumap)",         "type": "path",   "default": "tomograma.tumap", "depends_on": {"phase": "02", "key": "outputDir"}},
             {"key": "outName",    "label": "Nombre base de salida (sin extensión)",  "type": "text",   "default": "resultado", "depends_on": {"phase": "__global__", "key": "outName"}},
             {"key": "outputDir",  "label": "Directorio de salida",                   "type": "path",   "default": ".", "depends_on": {"phase": "__global__", "key": "outputDir"}},
+            {"key": "auto_bounding",   "label": "¿Seleccionar de forma automática la bounding box?",   "type": "bool",   "default": False},
+            {"key": "interactive_bb",   "label": "¿Seleccionar de forma interactiva la bounding box?",   "type": "bool",   "default": False, "show_if": {"key": "auto_bounding", "equals": False}},
+            {"key": "xlow_bb",  "label": "Limite inferior para la bounding box del eje X", "type": "number", "default": 0, "min": -9999, "max": 9999, "show_if": {"key": "interactive_bb", "equals": False}},
+            {"key": "xhi_bb",  "label": "Limite superior para la bounding box del eje X", "type": "number", "default": 0, "min": -9999, "max": 9999, "show_if": {"key": "interactive_bb", "equals": False}},
+            {"key": "ylow_bb",  "label": "Limite inferior para la bounding box del eje Y", "type": "number", "default": 0, "min": -9999, "max": 9999, "show_if": {"key": "interactive_bb", "equals": False}},
+            {"key": "yhi_bb",  "label": "Limite superior para la bounding box del eje Y", "type": "number", "default": 0, "min": -9999, "max": 9999, "show_if": {"key": "interactive_bb", "equals": False}},
             {"key": "size_x", "label": "Tamaño del cubo — nx", "type": "number", "default": 2000, "min": 1, "max": 9999},
             {"key": "size_y", "label": "Tamaño del cubo — ny", "type": "number", "default": 2000, "min": 1, "max": 9999},
-            {"key": "threshold",  "label": "Umbral para máscara", "type": "number", "default": 50,  "min": 0, "max": 9999},
+            {"key": "interactive_threshold",   "label": "¿Seleccionar de forma interactiva el umbral para la máscara?",   "type": "bool",   "default": False},
+            {"key": "threshold",  "label": "Umbral para máscara", "type": "number", "default": 30,  "min": 0, "max": 9999,  "show_if": {"key": "interactive_threshold", "equals": False}},
             {"key": "sigma", "label": "Sigma del filtro gaussiano", "type": "number", "default": 5,   "min": 0, "max": 100},
         ],
     },
@@ -149,6 +155,7 @@ PHASES = [
         "group": "Análisis topológico",
         "params": [
             {"key": "input",      "label": "Imagen del espacio latente (.fits)",         "type": "path",   "default": "espacio_latente.fits", "depends_on": {"phase": "03", "key": "input"}},
+            {"key": "mask",      "label": "Mascara del espacio latente (.fits)",         "type": "path",   "default": "mascara.fits", "depends_on": {"phase": "03", "key": "input"}},
             {"key": "cut",      "label": "Umbral de persistencia",         "type": "number",   "default": "0"},
             {"key": "manifolds",      "label": "Expresión de DisPerSE sobre los manifolds a exportar",        "type": "path",   "default": "J2d"},
             {"key": "loadMSC", "label": "Fichero del complejo previamente generado (.MSC)", "type": "path",   "default": ""},
@@ -211,7 +218,7 @@ PHASES = [
             {"key": "inputDir",      "label": "Directorio de entrada donde se encuentran los manifolds", "type": "path",   "default": ".", "depends_on": {"phase": "08", "key": "outputDir"}},
             {"key": "outName",    "label": "Nombre base de salida (sin extensión)", "type": "text",   "default": "resultado", "depends_on": {"phase": "__global__", "key": "outName"}},
             {"key": "reference",      "label": "Fichero UMAP del tomograma de referencia (.tumap)", "type": "path",   "default": "tomograma.tumap", "depends_on": {"phase": "03", "key": "input"}},
-            {"key": "metadata",      "label": "Fichero de metadatos (.mdata)", "type": "path",   "default": "maxpoints.mdata", "depends_on": {"phase": "07", "key": "outName"}},
+            {"key": "metadata",      "label": "Fichero de metadatos (.mdata)", "type": "path",   "default": "maxpoints.mdata", "depends_on": {"phase": "03", "key": "outName"}},
             {"key": "outputDir",  "label": "Directorio de salida", "type": "path",   "default": ".", "depends_on": {"phase": "__global__", "key": "outputDir"}},
         ],
     },
@@ -466,6 +473,10 @@ def run_phase(phase, all_params, params, index, total):
             input     = params["input"],
             outName   = params["outName"],
             outputDir = params["outputDir"],
+            auto_boundingbox = params["auto_bounding"],
+            interactive_boundingbox = params["interactive_bb"],
+            bounding_box = (params["xlow_bb"], params["xhi_bb"], params["ylow_bb"], params["yhi_bb"]),
+            interactive_threshold = params["interactive_threshold"],
             size      = (int(params["size_x"]), int(params["size_y"])),
             threshold = int(params["threshold"]),
             sigma     = int(params["sigma"]),
@@ -480,6 +491,7 @@ def run_phase(phase, all_params, params, index, total):
             params["mask"] = params_03["mask"]
         skl, manifolds = mse.main(
             input = params["input"],
+            mask = params["mask"],
             cut = params["cut"],
             manifolds = params["manifolds"],
             loadMSC = None if (params["loadMSC"] == "") else params["loadMSC"],
@@ -562,12 +574,13 @@ def run_phase(phase, all_params, params, index, total):
             outputDir = params["outputDir"],
         )
     elif phase["id"] == "10":   # Create PNG
-        params_08 = all_params.get("09", None)
+        params_08 = all_params.get("08", None)
         if params_08 is not None:
             params["inputDir"] = params_08["outputDir"]
         params_03 = all_params.get("03", None)
         if params_03 is not None:
             params["referenceImg"] = str(Path(params_03["img"]).with_suffix(".png"))
+        print(params)
         showmanifolds.main(
             inputDir     = params["inputDir"],
             referenceImg   = params["referenceImg"],
