@@ -74,7 +74,7 @@ def main(input, outputDir=".", debug=False, quiet=False, no_logs=False):
             # Add the point of the triangle to the class
             if not(class_id in class_data):
                 class_data[class_id] = list()
-            class_data[class_id].append({"umap_0": point[0], "umap_1": point[1]})
+            class_data[class_id].append({"x": point[0], "y": point[1]})
 
     logger.info("Points clustered correctly!")
     # Make sure the output directory exists
