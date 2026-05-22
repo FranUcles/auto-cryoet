@@ -67,8 +67,10 @@ def load_dataframe(input_file: str) -> pd.DataFrame:
         raise
         
 def compute_boundingbox(df: pd.DataFrame):
+    logger.info("Computing bounding box...")
     umap_0min, umap_0max = df["umap_0"].min(), df["umap_0"].max()
     umap_1min, umap_1max = df["umap_1"].min(), df["umap_1"].max()
+    logger.info("Bounding box computed!")
     return ((umap_0min, umap_0max), (umap_1min, umap_1max))
 
 def generate_metadata(x_index, y_index, points_index):
@@ -85,6 +87,7 @@ def generate_metadata(x_index, y_index, points_index):
     return cell_map
     
 def compute_clustering(clust_array: np.ndarray, points: pd.DataFrame, x_bb: tuple[float, float], y_bb: tuple[float, float]):
+    logger.info("Generating 2D image...")
     ny, nx = clust_array.shape
     logger.debug(f"Size: {clust_array.shape}")
     
@@ -110,6 +113,7 @@ def compute_clustering(clust_array: np.ndarray, points: pd.DataFrame, x_bb: tupl
     
     # np.add.at handles duplicate indices correctly (unlike direct indexing)
     np.add.at(clust_array, (y_index, x_index), 1)
+    logger.info("2D image generated!")
     return x_index, y_index, points.index[valid]
 
         
