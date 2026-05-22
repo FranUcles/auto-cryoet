@@ -231,7 +231,7 @@ PHASES = [
         "desc":  "Crea una imagen PNG que contiene los manifolds sobre el espacio latente.",
         "group": "Post-process",
         "params": [
-            {"key": "inputDir",      "label": "Directorio de entrada donde se encuentran los manifolds", "type": "path",   "default": ".", "depends_on": {"phase": "08", "key": "outputDir"}},
+            {"key": "inputDir",      "label": "Directorio de entrada donde se encuentran los manifolds con coordenadas de la imagen del espacio latente", "type": "path",   "default": ".", "depends_on": {"phase": "08", "key": "outputDir"}},
             {"key": "referenceImg",      "label": "Imagen PNG del espacio latente (.png)", "type": "path",   "default": "espacio_latente.png", "depends_on": {"phase": "03", "key": "input"}},
             {"key": "outName",    "label": "Nombre base de salida (sin extensión)", "type": "text",   "default": "resultado", "depends_on": {"phase": "__global__", "key": "outName"}},
             {"key": "outputDir",  "label": "Directorio de salida", "type": "path",   "default": ".", "depends_on": {"phase": "__global__", "key": "outputDir"}},
@@ -243,7 +243,7 @@ PHASES = [
         "desc":  "Crea un archivo MRC igual que el del tomograma de referencia con la segmentación.",
         "group": "Post-process",
         "params": [
-            {"key": "inputDir",      "label": "Directorio de entrada donde se encuentran los manifolds", "type": "path",   "default": ".", "depends_on": {"phase": "09", "key": "outputDir"}},
+            {"key": "inputDir",      "label": "Directorio de entrada donde se encuentran los manifolds en coordenadas del espacio latente", "type": "path",   "default": ".", "depends_on": {"phase": "09", "key": "outputDir"}},
             {"key": "reference",      "label": "Fichero MRC del tomograma de referencia (.mrc)", "type": "path",   "default": "tomograma.mrc", "depends_on": {"phase": "01", "key": "input"}},
             {"key": "outName",    "label": "Nombre base de salida (sin extensión)", "type": "text",   "default": "resultado", "depends_on": {"phase": "__global__", "key": "outName"}},
             {"key": "outputDir",  "label": "Directorio de salida", "type": "path",   "default": ".", "depends_on": {"phase": "__global__", "key": "outputDir"}},
