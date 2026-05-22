@@ -212,12 +212,15 @@ PHASES = [
     {
         "id":    "09",
         "name":  "Transformación de los manifolds al espacio latente",
-        "desc":  "Transforma los manifolds de los ficheros .clust en otros manifolds relativos al espacio latente también en .clust.",
+        "desc":  "Transforma los manifolds de los ficheros .clust en otros manifolds relativos al espacio latente también en .clust y en el formato de embeddings (.temb)",
         "group": "Post-process",
         "params": [
             {"key": "inputDir",      "label": "Directorio de entrada donde se encuentran los manifolds", "type": "path",   "default": ".", "depends_on": {"phase": "08", "key": "outputDir"}},
             {"key": "outName",    "label": "Nombre base de salida (sin extensión)", "type": "text",   "default": "resultado", "depends_on": {"phase": "__global__", "key": "outName"}},
-            {"key": "reference",      "label": "Fichero UMAP del tomograma de referencia (.tumap)", "type": "path",   "default": "tomograma.tumap", "depends_on": {"phase": "03", "key": "input"}},
+            {"key": "sizeXimg", "label": "Tamaño del espacio latente en el eje X", "type": "number", "default": 2000, "min": 1, "max": 9999, "depends_on": {"phase": "03", "key": "size_x"}},
+            {"key": "sizeYimg", "label": "Tamaño del espacio latente en el eje Y", "type": "number", "default": 2000, "min": 1, "max": 9999, "depends_on": {"phase": "03", "key": "size_y"}},
+            {"key": "referenceUMAP",      "label": "Fichero UMAP del tomograma de referencia (.tumap)", "type": "path",   "default": "tomograma.tumap", "depends_on": {"phase": "03", "key": "input"}},
+            {"key": "referenceEmb",      "label": "Fichero de embeddings del tomograma de referencia (.temb)", "type": "path",   "default": "tomograma.temb", "depends_on": {"phase": "02", "key": "input"}},
             {"key": "metadata",      "label": "Fichero de metadatos (.mdata)", "type": "path",   "default": "maxpoints.mdata", "depends_on": {"phase": "03", "key": "outName"}},
             {"key": "outputDir",  "label": "Directorio de salida", "type": "path",   "default": ".", "depends_on": {"phase": "__global__", "key": "outputDir"}},
         ],
@@ -457,13 +460,14 @@ def run_phase(phase, all_params, params, index, total):
         params_01 = all_params.get("01", None)
         if params_01 is not None:
             params["input"] = params_01["temb"]
-        result = umap.main(
+        result_umap, result_emb = umap.main(
             input     = params["input"],
             chunk_size   = params["chunk_size"],
             fit_sample_size = params["fit_sample_size"],
             outputDir = params["outputDir"],
         )
-        params["tumap"] = result
+        params["tumap"] = result_umap
+        params["temb"] = result_emb
 
     elif phase["id"] == "03":   # Cloud Points
         params_02 = all_params.get("02", None)
@@ -562,14 +566,17 @@ def run_phase(phase, all_params, params, index, total):
             params["inputDir"] = params_08["outputDir"]
         params_02 = all_params.get("02", None)
         if params_02 is not None:
-            params["reference"] = params_02["tumap"]
+            params["referenceUMAP"] = params_02["tumap"]
+            params["referenceEmb"] = params_02["temb"]
         params_03 = all_params.get("03", None)
         if params_03 is not None:
             params["metadata"] = params_03["metadata"]
         recover.main(
             input = None,
             inputDir     = params["inputDir"],
-            reference   = params["reference"],
+            imgXsize = params["sizeXimg"],
+            referenceUMAP   = params["referenceUMAP"],
+            referenceEmb   = params["referenceEmb"],
             metadata = params["metadata"],
             outputDir = params["outputDir"],
         )
