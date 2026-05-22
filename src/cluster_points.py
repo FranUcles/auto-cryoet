@@ -28,7 +28,7 @@ def parse_args():
     field_group.add_argument("--bounding_box", type=float, nargs=4,  help="Define la bounding box a utilizar siendo (umap0_min, umap0_max, umap1_min, umap1_max)")
     parser.add_argument("-s", "--size", type=int, required=True, nargs=2, help="Size of the cube (nx,ny)")
     threshold_group = parser.add_mutually_exclusive_group(required=True)
-    threshold_group.add_argument("-t", "--threshold", type=int, required=True, help="Threshold value")
+    threshold_group.add_argument("-t", "--threshold", type=int, help="Threshold value")
     threshold_group.add_argument("--interactive_threshold", action="store_true", help="Activa el modo interactivo para el umbral de la máscara")
     parser.add_argument("-sg", "--sigma", type=int, required=True, help="Gaussian sigma value value")
     return parser.parse_args()
@@ -73,18 +73,13 @@ def compute_boundingbox(df: pd.DataFrame):
     logger.info("Bounding box computed!")
     return ((umap_0min, umap_0max), (umap_1min, umap_1max))
 
-def generate_metadata(x_index, y_index, points_index):
+def generate_metadata(x_index, y_index, yresolution, points) -> pd.DataFrame:
     logger.info("Building metadata...")
-
-    df_idx = pd.DataFrame({
-        "xi": x_index,
-        "yi": y_index,
-        "point_idx": points_index
-    })
-    cell_map = df_idx.groupby(["xi", "yi"])["point_idx"].apply(list).to_dict()
-    
+    pixel_id = yresolution*y_index + x_index
+    df_new = points[["X", "Y", "Z"]].copy()
+    df_new["pixel_id"] = pixel_id
     logger.info("Metadata built!")
-    return cell_map
+    return df_new
     
 def compute_clustering(clust_array: np.ndarray, points: pd.DataFrame, x_bb: tuple[float, float], y_bb: tuple[float, float]):
     logger.info("Generating 2D image...")
@@ -114,7 +109,7 @@ def compute_clustering(clust_array: np.ndarray, points: pd.DataFrame, x_bb: tupl
     # np.add.at handles duplicate indices correctly (unlike direct indexing)
     np.add.at(clust_array, (y_index, x_index), 1)
     logger.info("2D image generated!")
-    return x_index, y_index, points.index[valid]
+    return x_index, y_index, points.loc[valid]
 
         
 def save_img(filename, outputdir, data:np.ndarray) -> str:
@@ -165,11 +160,11 @@ def build_mask(data:np.ndarray, threshold):
 def apply_filter(data: np.ndarray, sigma: float) -> np.ndarray:
     return scipy.ndimage.gaussian_filter(data, sigma=sigma)
 
-def save_metadata(filename, outputdir, metadata) -> str:
+def save_metadata(filename, outputdir, metadata: pd.DataFrame) -> str:
 
     # Create the output path
     outputfile = '%s/%s.mdata' % (outputdir, filename)
-    pd.to_pickle(metadata, outputfile)
+    metadata.to_pickle(outputfile)
     return outputfile
 
 def ask_limits(xlo_prev: float, xhi_prev: float, ylo_prev: float, yhi_prev: float) -> tuple[float, float, float, float]:
@@ -223,7 +218,7 @@ def interactive_bb_loop(clusters, points):
             xlo, xhi, ylo, yhi = ask_limits(xlo, xhi, ylo, yhi)
         else:
             print(" Usando bounding box calculada de forma automática para la primera iteración")
-        x, y, index = compute_clustering(clusters_aux, points, (xlo, xhi), (ylo, yhi))
+        x, y, selected_points = compute_clustering(clusters_aux, points, (xlo, xhi), (ylo, yhi))
         save_png("boundingbox_preview", tempdir, clusters_aux)
         open_image(img_path)
         resp = input("\n  ¿Es el resultado esperado? [s/N]: ").strip().lower()
@@ -239,7 +234,7 @@ def interactive_bb_loop(clusters, points):
         )
     print(f"{'═'*52}\n")
 
-    return x, y, index
+    return x, y, selected_points
 
 def ask_threshold(threshold_curr: float) -> float:
     print(
@@ -294,11 +289,11 @@ def main(input, outName, auto_boundingbox, interactive_boundingbox, interactive_
     # Read the UMAP file
     points = load_dataframe(input)
     # Create the array
-    nx, ny= size
+    nx, ny = size
     logger.debug(f"Input size: ({nx}, {ny})")
-    clusters = np.zeros([nx, ny]).astype(dtype=int)
+    clusters = np.zeros([ny, nx]).astype(dtype=int)
     if interactive_boundingbox:
-        x, y, index = interactive_bb_loop(clusters, points)
+        x, y, selected_points = interactive_bb_loop(clusters, points)
     else: 
         if auto_boundingbox:
             # Compute the boundingbox
@@ -308,9 +303,9 @@ def main(input, outName, auto_boundingbox, interactive_boundingbox, interactive_
             logger.info("Bounding box computed!")
         else:
             umap_0_bb, umap_1_bb = (bounding_box[0], bounding_box[1]), (bounding_box[0], bounding_box[1])
-        x, y, index = compute_clustering(clusters, points, umap_0_bb, umap_1_bb)
+        x, y, selected_points = compute_clustering(clusters, points, umap_0_bb, umap_1_bb)
     
-    metadata = generate_metadata(x, y, index)    
+    metadata = generate_metadata(x, y, ny, selected_points)    
     # Apply gaussian filter
     clusters = apply_filter(clusters, sigma)
     # Save the file
