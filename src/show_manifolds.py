@@ -64,7 +64,7 @@ def main(inputDir, referenceImg, outName, outputDir=".", debug=False, quiet=Fals
     folder = inputDir
     logger.info("Loading the manifolds...")
     # Obtain how many manifolds we have
-    dfs = [pd.read_pickle(os.path.join(folder, f)) for f in os.listdir(folder)]
+    dfs = [pd.read_pickle(f) for f in Path(folder).iterdir() if f.is_file() and f.suffix == ".clust"]
     n = len(dfs)
     # Generate the colors
     colors = generate_colors(n)
@@ -79,8 +79,8 @@ def main(inputDir, referenceImg, outName, outputDir=".", debug=False, quiet=Fals
     logger.info("Plotting the manifolds...")
     for df, color in zip(dfs, colors):
         # Obtain all the coordinates
-        x = df["umap_0"].to_numpy(dtype=np.int32)
-        y = df["umap_1"].to_numpy(dtype=np.int32)
+        x = df["x"].to_numpy(dtype=np.int32)
+        y = df["y"].to_numpy(dtype=np.int32)
         # Filter those out-bounds points
         mask = (y >= 0) & (y < heigh) & (x >= 0) & (x < width)
         arr[y[mask], x[mask]] = color
