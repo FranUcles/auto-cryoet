@@ -73,9 +73,9 @@ def compute_boundingbox(df: pd.DataFrame):
     logger.info("Bounding box computed!")
     return ((umap_0min, umap_0max), (umap_1min, umap_1max))
 
-def generate_metadata(x_index, y_index, yresolution, points) -> pd.DataFrame:
+def generate_metadata(x_index, y_index, xresolution, points) -> pd.DataFrame:
     logger.info("Building metadata...")
-    pixel_id = yresolution*y_index + x_index
+    pixel_id = xresolution*y_index + x_index
     df_new = points[["X", "Y", "Z"]].copy()
     df_new["pixel_id"] = pixel_id
     logger.info("Metadata built!")
@@ -305,7 +305,7 @@ def main(input, outName, auto_boundingbox, interactive_boundingbox, interactive_
             umap_0_bb, umap_1_bb = (bounding_box[0], bounding_box[1]), (bounding_box[0], bounding_box[1])
         x, y, selected_points = compute_clustering(clusters, points, umap_0_bb, umap_1_bb)
     
-    metadata = generate_metadata(x, y, ny, selected_points)    
+    metadata = generate_metadata(x, y, nx, selected_points)    
     # Apply gaussian filter
     clusters = apply_filter(clusters, sigma)
     # Save the file
