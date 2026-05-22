@@ -16,7 +16,9 @@ def parse_args():
     input_group = parser.add_mutually_exclusive_group(required=True)
     input_group.add_argument("-i", "--input", type=str, help="Input cluster file")
     input_group.add_argument("--inputDir", type=str, default=None, help="Input directory containing all the clusters to process")
-    parser.add_argument("-r", "--reference", type=str, required=True, help="UMAP reference file")
+    parser.add_argument("--referenceUMAP", type=str, required=True, help="UMAP reference file (.tumap)")
+    parser.add_argument("--referenceEmb", type=str, required=True, help="Embeddings reference file (.temb)")
+    parser.add_argument("-s", "--imgXsize", type=int, required=True, help="Pixel size of the X-axis in the image")
     parser.add_argument("-m", "--metadata", type=str, required=True, help="Metadata file")
     parser.add_argument("--outputDir", type=str, required=False, default=".",  help="Output directory")
     return parser.parse_args()
@@ -57,31 +59,36 @@ def read_points_from_file(fname):
 def save(df: pd.DataFrame, file):
     df.to_pickle(file)
 
-def process_class(_input, metadata_df, reference_df, outputDir):
-    logger.info("Reading files...")
-    df = read_points_from_file(_input)
-    logger.info("Files read!")
+
+def process_class(_input, xsize, metadata_df, reference_umap_df, reference_temb_df, outputDir):
     logger.info("Converting points...")
-    keys = list(zip(df["umap_0"], df["umap_1"]))
-    indices = [idx for k in keys for idx in metadata_df.get(k, [])]
-    subset = reference_df.loc[indices]
+    logger.debug("Reading file...")
+    df = read_points_from_file(_input)
+    logger.debug("File read!")
+    pixel_id = df["y"]*xsize + df["x"]
+    pixel_id = pixel_id.to_numpy().astype(int)
+    subset = metadata_df.loc[metadata_df["pixel_id"].isin(pixel_id), ["X", "Y", "Z"]].astype("float32")
+    subset_umap = reference_umap_df.merge(subset, how = "inner", on = ["X", "Y", "Z"])
+    subset_temb = reference_temb_df.merge(subset, how = "inner", on = ["X", "Y", "Z"])
     outputfilename = Path(_input).name
     outputfile = Path(outputDir) / outputfilename
-    logger.debug("Saving file {str(outputfile.resolve())}")
-    save(subset, str(outputfile.resolve()))
+    logger.debug(f"Saving file {str(outputfile.resolve())}")
+    save(subset_umap, str(outputfile.resolve()))
+    save(subset_temb, str(outputfile.with_suffix(".temb").resolve()))
     logger.info("Converted!")
 
-def main(input, inputDir, reference, metadata, outputDir=".", debug=False, quiet=False, no_logs=False):
+def main(input, imgXsize, inputDir, referenceUMAP, referenceEmb, metadata, outputDir=".", debug=False, quiet=False, no_logs=False):
     os.makedirs(outputDir, exist_ok=True)
     configure_logging(debug, quiet, no_logs)
-    _metadata = read_points_from_file(metadata)
-    _reference = read_points_from_file(reference)
+    metadata = read_points_from_file(metadata)
+    reference_umap = read_points_from_file(referenceUMAP)
+    reference_temb = read_points_from_file(referenceEmb)
     if inputDir is None:
-        process_class(input, _metadata, _reference, outputDir)
+        process_class(input, imgXsize, metadata, reference_umap, reference_temb, outputDir)
     else:
         for file in os.listdir(inputDir):
             file_path = Path(inputDir) / file
-            process_class(str(file_path.resolve()), _metadata, _reference, outputDir)
+            process_class(str(file_path.resolve()), imgXsize, metadata, reference_umap, reference_temb, outputDir)
 
 if __name__ == "__main__":
     args = parse_args()
