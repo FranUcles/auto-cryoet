@@ -103,8 +103,6 @@ def compute_clustering(clust_array: np.ndarray, points: pd.DataFrame, x_bb: tupl
     
     x_index = np.clip((x_off / x_size).astype(int), 0, nx - 1)
     y_index = np.clip((y_off / y_size).astype(int), 0, ny - 1)
-    # Flip the Y-axis to solve mismatch between UMAP and PNG coordinates
-    y_index = ny - 1 - y_index
     
     # np.add.at handles duplicate indices correctly (unlike direct indexing)
     np.add.at(clust_array, (y_index, x_index), 1)
@@ -161,7 +159,6 @@ def apply_filter(data: np.ndarray, sigma: float) -> np.ndarray:
     return scipy.ndimage.gaussian_filter(data, sigma=sigma)
 
 def save_metadata(filename, outputdir, metadata: pd.DataFrame) -> str:
-
     # Create the output path
     outputfile = '%s/%s.mdata' % (outputdir, filename)
     metadata.to_pickle(outputfile)
@@ -304,7 +301,8 @@ def main(input, outName, auto_boundingbox, interactive_boundingbox, interactive_
         else:
             umap_0_bb, umap_1_bb = (bounding_box[0], bounding_box[1]), (bounding_box[0], bounding_box[1])
         x, y, selected_points = compute_clustering(clusters, points, umap_0_bb, umap_1_bb)
-    
+    # Flip the Y-axis to solve mismatch between UMAP and PNG coordinates
+    clusters = np.flipud(clusters)
     metadata = generate_metadata(x, y, nx, selected_points)    
     # Apply gaussian filter
     clusters = apply_filter(clusters, sigma)
