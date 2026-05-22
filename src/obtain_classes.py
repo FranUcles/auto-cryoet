@@ -81,13 +81,13 @@ def main(input, outputDir=".", debug=False, quiet=False, no_logs=False):
     os.makedirs(Path(outputDir).resolve(), exist_ok=True)
     # Convert every class to a dataframe
     logger.info("Saving all the points...")
-    input_filename = Path(input).stem
+    input_filename = Path(input).with_suffix("").with_suffix("")
     for class_id, points in class_data.items():
         df = pd.DataFrame(points)
         df = df.drop_duplicates()
         logger.debug(f"Class: {class_id} with data: {df}")
         # Save the dataframe
-        output_name = (Path(outputDir) / (input_filename + "_" + str(int(class_id)) + ".clust")).resolve()
+        output_name = (Path(outputDir) / (str(input_filename) + "_" + str(int(class_id)) + ".clust")).resolve()
         df.to_pickle(output_name)
     logger.info("Saved all the classes!")
 
