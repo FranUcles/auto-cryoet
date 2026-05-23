@@ -212,14 +212,13 @@ PHASES = [
     {
         "id":    "09",
         "name":  "Transformación de los manifolds al espacio latente",
-        "desc":  "Transforma los manifolds de los ficheros .clust en otros manifolds relativos al espacio latente también en .clust y en el formato de embeddings (.temb)",
+        "desc":  "Transforma los manifolds de los ficheros .clust en otros manifolds relativos al espacio latente en el formato de embeddings (.temb)",
         "group": "Post-process",
         "params": [
             {"key": "inputDir",      "label": "Directorio de entrada donde se encuentran los manifolds", "type": "path",   "default": ".", "depends_on": {"phase": "08", "key": "outputDir"}},
             {"key": "outName",    "label": "Nombre base de salida (sin extensión)", "type": "text",   "default": "resultado", "depends_on": {"phase": "__global__", "key": "outName"}},
             {"key": "sizeXimg", "label": "Tamaño del espacio latente en el eje X", "type": "number", "default": 2000, "min": 1, "max": 9999, "depends_on": {"phase": "03", "key": "size_x"}},
             {"key": "sizeYimg", "label": "Tamaño del espacio latente en el eje Y", "type": "number", "default": 2000, "min": 1, "max": 9999, "depends_on": {"phase": "03", "key": "size_y"}},
-            {"key": "referenceUMAP",      "label": "Fichero UMAP del tomograma de referencia (.tumap)", "type": "path",   "default": "tomograma.tumap", "depends_on": {"phase": "03", "key": "input"}},
             {"key": "referenceEmb",      "label": "Fichero de embeddings del tomograma de referencia (.temb)", "type": "path",   "default": "tomograma.temb", "depends_on": {"phase": "02", "key": "input"}},
             {"key": "metadata",      "label": "Fichero de metadatos (.mdata)", "type": "path",   "default": "maxpoints.mdata", "depends_on": {"phase": "03", "key": "outName"}},
             {"key": "outputDir",  "label": "Directorio de salida", "type": "path",   "default": ".", "depends_on": {"phase": "__global__", "key": "outputDir"}},
@@ -246,6 +245,7 @@ PHASES = [
             {"key": "inputDir",      "label": "Directorio de entrada donde se encuentran los manifolds en coordenadas del espacio latente", "type": "path",   "default": ".", "depends_on": {"phase": "09", "key": "outputDir"}},
             {"key": "reference",      "label": "Fichero MRC del tomograma de referencia (.mrc)", "type": "path",   "default": "tomograma.mrc", "depends_on": {"phase": "01", "key": "input"}},
             {"key": "outName",    "label": "Nombre base de salida (sin extensión)", "type": "text",   "default": "resultado", "depends_on": {"phase": "__global__", "key": "outName"}},
+            {"key": "separate",   "label": "¿Separar cada manifold en un fichero MRC distinto?",   "type": "bool",   "default": False},
             {"key": "outputDir",  "label": "Directorio de salida", "type": "path",   "default": ".", "depends_on": {"phase": "__global__", "key": "outputDir"}},
         ],
     },
@@ -559,7 +559,7 @@ def run_phase(phase, all_params, params, index, total):
             outputDir = params["outputDir"],
         )
     elif phase["id"] == "09":   # Transform manifolds
-        outputDirPath = Path(params["outputDir"]) / ("manifolds_filtered_umap")
+        outputDirPath = Path(params["outputDir"]) / ("manifolds_filtered_emb")
         params["outputDir"] = str(outputDirPath)
         params_08 = all_params.get("08", None)
         if params_08 is not None:
@@ -575,7 +575,6 @@ def run_phase(phase, all_params, params, index, total):
             input = None,
             inputDir     = params["inputDir"],
             imgXsize = params["sizeXimg"],
-            referenceUMAP   = params["referenceUMAP"],
             referenceEmb   = params["referenceEmb"],
             metadata = params["metadata"],
             outputDir = params["outputDir"],
@@ -605,6 +604,7 @@ def run_phase(phase, all_params, params, index, total):
             input       = None,
             inputDir     = params["inputDir"],
             reference   = params["reference"],
+            separate = params["separate"],
             outName = params["outName"],
             outputDir = params["outputDir"],
         )
