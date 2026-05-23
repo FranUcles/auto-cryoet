@@ -90,7 +90,7 @@ def main(input, inputDir, reference, outName, separate=False, outputDir=".", deb
         for file in tqdm(files, total=len(files), desc="Processing files"):
             # Read the input cluster
             file_path = Path(inputDir) / file
-            if not file_path.suffix.isin([".clust", ".temb", ".tumap"]):
+            if not file_path.suffix in {".clust", ".temb", ".tumap"}:
                 continue
             df = pd.read_pickle(file_path)
             # Obtain the coordinates of the data
@@ -99,7 +99,7 @@ def main(input, inputDir, reference, outName, separate=False, outputDir=".", deb
             fill_mrc(nuevo_vol, shape, coords, cluster_value)
             if separate:
                 vols_id[id] = nuevo_vol
-                vols_metadata[id] = {"filename": file_path}
+                vols_metadata[id] = {"filename": str(file_path.resolve())}
                 nuevo_vol = np.zeros(shape, dtype=np.float32)
                 id += 1
             else:
@@ -110,7 +110,7 @@ def main(input, inputDir, reference, outName, separate=False, outputDir=".", deb
         # Save the MRC
     logger.info("Saving the MRC...")
     os.makedirs(outputDir, exist_ok=True)
-    for id, vol in vols_id:
+    for id, vol in vols_id.items():
         output = Path(outputDir) / (outName + f"_{id}_segmentation.mrc")
         save_mrc(vol, voxel_size, str(output.resolve()))
     if separate:
