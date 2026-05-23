@@ -8,6 +8,7 @@ import numpy as np
 import os
 import matplotlib as mpl
 from pathlib import Path
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +65,8 @@ def main(inputDir, referenceImg, outName, outputDir=".", debug=False, quiet=Fals
     folder = inputDir
     logger.info("Loading the manifolds...")
     # Obtain how many manifolds we have
-    dfs = [pd.read_pickle(f) for f in Path(folder).iterdir() if f.is_file() and f.suffix == ".clust"]
-    n = len(dfs)
+    dfs_data = [{"df": pd.read_pickle(f), "filename": str(f)} for f in Path(folder).iterdir() if f.is_file() and f.suffix == ".clust"]
+    n = len(dfs_data)
     # Generate the colors
     colors = generate_colors(n)
     logger.info("Manifolds loaded!")
@@ -77,7 +78,13 @@ def main(inputDir, referenceImg, outName, outputDir=".", debug=False, quiet=Fals
     heigh, width = arr.shape[:2]
     logger.info("Image loaded!")
     logger.info("Plotting the manifolds...")
-    for df, color in zip(dfs, colors):
+    manifolds_metadata = {}
+    id = 1
+    for df_data, color in zip(dfs_data, colors):
+        df = df_data["df"]
+        # Save metadata
+        manifolds_metadata[id] = {"filename": df_data["filename"], "color": "#{:02x}{:02x}{:02x}".format(*color)}
+        id += 1
         # Obtain all the coordinates
         x = df["x"].to_numpy(dtype=np.int32)
         y = df["y"].to_numpy(dtype=np.int32)
@@ -86,6 +93,9 @@ def main(inputDir, referenceImg, outName, outputDir=".", debug=False, quiet=Fals
         arr[y[mask], x[mask]] = color
     logger.info("Manifolds plotted!")
     outputPath = Path(outputDir) / (outName + ".png")
+    outputMetadataPath = Path(outputDir) / (outName + "_pngmetadata.json")
+    with open(str(outputMetadataPath.resolve()), "w", encoding="utf-8") as f:
+            json.dump(manifolds_metadata, f)
     logger.info("Saving the image...")
     # Revert the Y-axis flip to recover the original points
     arr = np.flipud(arr)
