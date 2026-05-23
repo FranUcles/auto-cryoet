@@ -8,6 +8,7 @@ import argparse
 from pathlib import Path
 import os
 from tqdm import tqdm
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ def parse_args():
     input_group = parser.add_mutually_exclusive_group(required=True)
     input_group.add_argument("-i", "--input", type=str, help="Input cluster to transform in a MRC")
     input_group.add_argument("--inputDir", type=str, default=None, help="Input directory containing all the clusters to be saved together")
+    parser.add_argument("--split", action="store_true", help="Save each class in a separate file")
     parser.add_argument("-o", "--outName", type=str, required=True, help="Output MRC filename")
     parser.add_argument("-r", "--reference", type=str, required=True, help="Reference MRC filename")
     parser.add_argument("--outputDir", type=str, default=".", help="Output directory")
@@ -61,11 +63,13 @@ def fill_mrc(mrc_data, mrc_shape, coords, value):
         if 0 <= z < mrc_shape[0] and 0 <= y < mrc_shape[1] and 0 <= x < mrc_shape[2]:
             mrc_data[z, y, x] = value
     
-def main(input, inputDir, reference, outName, outputDir=".", debug=False, quiet=False, no_logs=False):
+def main(input, inputDir, reference, outName, separate=False, outputDir=".", debug=False, quiet=False, no_logs=False):
     configure_logging(debug, quiet, no_logs)
     # Open the reference MRC file to obtain the parameters
     data_original, shape, voxel_size = open_mrc(reference)
     # Create the empty volume for the new MRC
+    vols_id = {}
+    vols_metadata = {}
     nuevo_vol = np.zeros(shape, dtype=np.float32)
     if inputDir is None:
         logger.info("Processing the file...")
@@ -80,25 +84,39 @@ def main(input, inputDir, reference, outName, outputDir=".", debug=False, quiet=
         # Since the inputDir option is marked, we need to gather all the 
         # clusters together
         cluster_value = 1.0
+        id = 1
         logger.info("Processing all files...")
         files = os.listdir(inputDir)
         for file in tqdm(files, total=len(files), desc="Processing files"):
             # Read the input cluster
             file_path = Path(inputDir) / file
-            if file_path.suffix != ".clust":
+            if not file_path.suffix.isin([".clust", ".temb", ".tumap"]):
                 continue
             df = pd.read_pickle(file_path)
             # Obtain the coordinates of the data
             coords = df[["Z", "Y", "X"]].astype(int).values
             # Fill the MRC
             fill_mrc(nuevo_vol, shape, coords, cluster_value)
-            cluster_value += 1.0
+            if separate:
+                vols_id[id] = nuevo_vol
+                vols_metadata[id] = {"filename": file_path}
+                nuevo_vol = np.zeros(shape, dtype=np.float32)
+                id += 1
+            else:
+                cluster_value += 1.0
+        if not separate:
+            vols_id[0] = nuevo_vol
         logger.info("Files process completed!")
         # Save the MRC
     logger.info("Saving the MRC...")
     os.makedirs(outputDir, exist_ok=True)
-    output = Path(outputDir) / (outName + "_segmentation.mrc")
-    save_mrc(nuevo_vol, voxel_size, str(output.resolve()))
+    for id, vol in vols_id:
+        output = Path(outputDir) / (outName + f"_{id}_segmentation.mrc")
+        save_mrc(vol, voxel_size, str(output.resolve()))
+    if separate:
+        outputJson = Path(outputDir) / (outName + "_manifolds_metadata.json")
+        with open(str(outputJson.resolve()), "w", encoding="utf-8") as f:
+            json.dump(vols_metadata, f)
     logger.info("MRC saved!")
 
 if __name__ == "__main__":
