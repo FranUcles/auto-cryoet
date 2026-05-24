@@ -594,6 +594,8 @@ def run_phase(phase, all_params, params, index, total):
             outputDir = params["outputDir"],
         )
     elif phase["id"] == "11":   # Create MRC
+        outputDirPath = Path(params["outputDir"]) / ("manifolds_mrc")
+        params["outputDir"] = str(outputDirPath)
         params_09 = all_params.get("09", None)
         if params_09 is not None:
             params["inputDir"] = params_09["outputDir"]
