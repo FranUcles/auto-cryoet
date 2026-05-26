@@ -23,6 +23,7 @@ import convert_disperse as convertvtk
 import tomotwin_analysis as tomotwin
 import tomotwin_umap as umap
 import show_manifolds as showmanifolds
+import show_napari as shownapari
 try:
     from rich.console import Console
     from rich.panel import Panel
@@ -239,14 +240,29 @@ PHASES = [
     {
         "id":    "11",
         "name":  "Creación del archivo MRC con la segmentación",
-        "desc":  "Crea un archivo MRC igual que el del tomograma de referencia con la segmentación.",
+        "desc":  "Crea un archivo (o varios) MRC de las mismas dimensiones el tomograma de referencia con la segmentación.",
         "group": "Post-process",
         "params": [
             {"key": "inputDir",      "label": "Directorio de entrada donde se encuentran los manifolds en coordenadas del espacio latente", "type": "path",   "default": ".", "depends_on": {"phase": "09", "key": "outputDir"}},
             {"key": "reference",      "label": "Fichero MRC del tomograma de referencia (.mrc)", "type": "path",   "default": "tomograma.mrc", "depends_on": {"phase": "01", "key": "input"}},
             {"key": "outName",    "label": "Nombre base de salida (sin extensión)", "type": "text",   "default": "resultado", "depends_on": {"phase": "__global__", "key": "outName"}},
-            {"key": "separate",   "label": "¿Separar cada manifold en un fichero MRC distinto?",   "type": "bool",   "default": False},
+            {"key": "separate",   "label": "¿Separar cada manifold en un fichero MRC distinto?",   "type": "select",   "default": False, "choices": [
+                {"label": "Sí  —  requerido si se ejecuta la visualización en Napari", "value": True},
+                {"label": "No  —  un único fichero MRC con todos los manifolds", "value": False},
+            ]},
             {"key": "outputDir",  "label": "Directorio de salida", "type": "path",   "default": ".", "depends_on": {"phase": "__global__", "key": "outputDir"}},
+        ],
+    },
+    {
+        "id":    "12",
+        "name":  "Visualización de la segmentación en Napari",
+        "desc":  "Visualiza dentro de Napari tanto el tomograma como la segmentación generada.",
+        "group": "Visualizado",
+        "params": [
+            {"key": "input",    "label": "Fichero MRC del tomograma (.mrc)", "type": "text",   "default": "resultado.mrc", "depends_on": {"phase": "11", "key": "reference"}},
+            {"key": "segmentsDir",      "label": "Directorio de entrada donde se encuentran los manifolds en formato MRC", "type": "path",   "default": ".", "depends_on": {"phase": "11", "key": "outputDir"}},
+            {"key": "filesMetadata",      "label": "Fichero de metadatos donde se detallan las ids de cada segmentación (.json).", "type": "path",   "default": "segments_metadata.json", "depends_on": {"phase": "11", "key": "outName"}},
+            {"key": "colorsMetadata",    "label": "Fichero de metadatos donde se detalla el color de cada segmentación (.json).", "type": "text",   "default": "colors_metadata.json", "depends_on": {"phase": "10", "key": "outputDir"}},
         ],
     },
 ]
@@ -419,7 +435,17 @@ def ask_params(phase, all_params=None, selected_ids=None):
                     break
                 except ValueError:
                     console.print(f"  [{PALETTE['error']}]  Introduce un número válido.[/]")
- 
+        elif ptype == "select":
+            choices = [
+                questionary.Choice(title=c["label"], value=c["value"])
+                for c in param["choices"]
+            ]
+            val = questionary.select(
+                f"  {label}",
+                choices=choices,
+                default=param["default"],
+                style=CUSTOM_STYLE,
+            ).ask()
         else:  # text
             val = questionary.text(
                 f"  {label}",
@@ -585,13 +611,13 @@ def run_phase(phase, all_params, params, index, total):
         params_03 = all_params.get("03", None)
         if params_03 is not None:
             params["referenceImg"] = str(Path(params_03["img"]).with_suffix(".png"))
-        print(params)
-        showmanifolds.main(
+        img, metadata = showmanifolds.main(
             inputDir     = params["inputDir"],
             referenceImg   = params["referenceImg"],
             outName = params["outName"] + "_manifolds",
             outputDir = params["outputDir"],
         )
+        params["metadata"] = metadata
     elif phase["id"] == "11":   # Create MRC
         outputDirPath = Path(params["outputDir"]) / ("manifolds_mrc")
         params["outputDir"] = str(outputDirPath)
@@ -601,13 +627,28 @@ def run_phase(phase, all_params, params, index, total):
         params_02 = all_params.get("02", None)
         if params_02 is not None:
             params["reference"] = params_02["tumap"]
-        createmrc.main(
+        metadata = createmrc.main(
             input       = None,
             inputDir     = params["inputDir"],
             reference   = params["reference"],
             separate = params["separate"],
             outName = params["outName"],
             outputDir = params["outputDir"],
+        )
+        params["metadata"] = metadata
+    elif phase["id"] == "12":   # Visualice MRC
+        params_11 = all_params.get("11", None)
+        if params_11 is not None:
+            params["segmentsDir"] = params_11["outputDir"]
+            params["filesMetadata"] = params_11["metadata"]
+        params_10 = all_params.get("10", None)
+        if params_10 is not None:
+            params["colorsMetadata"] = params_10["metadata"]
+        shownapari.main(
+            input       = params["input"],
+            segmentsDir     = params["segmentsDir"],
+            filesMetadata   = params["filesMetadata"],
+            colorsMetadata = params["colorsMetadata"]
         )
     else:
         raise ValueError(f"Error en la fase {id}, no está registrada")
@@ -694,7 +735,10 @@ def main():
  
         # ── 3. Elegir fases ─────────────────────
         if mode == "all":
+            visual_step = questionary.confirm(f"¿Dese ejecutar la fase de visualizado de la segmentación mediante Napari?", default=False, style=CUSTOM_STYLE).ask()
             selected = [p["id"] for p in PHASES]
+            if not visual_step:
+                selected.remove("12")
  
         elif mode == "groups":
             # Obtener grupos únicos preservando orden de aparición
