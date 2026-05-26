@@ -566,7 +566,6 @@ def run_phase(phase, all_params, params, index, total):
             params["inputDir"] = params_08["outputDir"]
         params_02 = all_params.get("02", None)
         if params_02 is not None:
-            params["referenceUMAP"] = params_02["tumap"]
             params["referenceEmb"] = params_02["temb"]
         params_03 = all_params.get("03", None)
         if params_03 is not None:
