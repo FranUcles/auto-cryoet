@@ -59,7 +59,7 @@ def load_img(imgPath) -> np.ndarray:
 def save_img(img_arr, path: str):
     Image.fromarray(img_arr).save(path)
     
-def main(inputDir, referenceImg, outName, outputDir=".", debug=False, quiet=False, no_logs=False):
+def main(inputDir, referenceImg, outName, outputDir=".", debug=False, quiet=False, no_logs=False) -> str:
     os.makedirs(outputDir, exist_ok=True)
     configure_logging(debug, quiet, no_logs)
     folder = inputDir
@@ -100,8 +100,10 @@ def main(inputDir, referenceImg, outName, outputDir=".", debug=False, quiet=Fals
     # Revert the Y-axis flip to recover the original points
     arr = np.flipud(arr)
     # Save the image
-    save_img(arr, str(outputPath.resolve()))
+    image = str(outputPath.resolve())
+    save_img(arr, image)
     logger.info("Image saved!")
+    return image
 
 if __name__ == "__main__":
     args = parse_args()

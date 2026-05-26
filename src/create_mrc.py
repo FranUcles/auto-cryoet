@@ -63,7 +63,7 @@ def fill_mrc(mrc_data, mrc_shape, coords, value):
         if 0 <= z < mrc_shape[0] and 0 <= y < mrc_shape[1] and 0 <= x < mrc_shape[2]:
             mrc_data[z, y, x] = value
     
-def main(input, inputDir, reference, outName, separate=False, outputDir=".", debug=False, quiet=False, no_logs=False):
+def main(input, inputDir, reference, outName, separate=False, outputDir=".", debug=False, quiet=False, no_logs=False) -> str:
     configure_logging(debug, quiet, no_logs)
     # Open the reference MRC file to obtain the parameters
     data_original, shape, voxel_size = open_mrc(reference)
@@ -110,14 +110,17 @@ def main(input, inputDir, reference, outName, separate=False, outputDir=".", deb
         # Save the MRC
     logger.info("Saving the MRC...")
     os.makedirs(outputDir, exist_ok=True)
+    metadata = ""
     for id, vol in vols_id.items():
         output = Path(outputDir) / (outName + f"_{id}_segmentation.mrc")
         save_mrc(vol, voxel_size, str(output.resolve()))
     if separate:
         outputJson = Path(outputDir) / (outName + "_manifolds_metadata.json")
-        with open(str(outputJson.resolve()), "w", encoding="utf-8") as f:
+        metadata = str(outputJson.resolve())
+        with open(metadata, "w", encoding="utf-8") as f:
             json.dump(vols_metadata, f)
     logger.info("MRC saved!")
+    return metadata
 
 if __name__ == "__main__":
     args = parse_args()
