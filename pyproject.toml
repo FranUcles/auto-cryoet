@@ -11,7 +11,8 @@ dependencies = [
     "questionary",
     "coloredlogs",
     "vtk",
-    "fitsio"
+    "fitsio",
+    "napari"
 ]
 
 [tool.setuptools]
@@ -27,5 +28,6 @@ script-files = [
     "src/create_mrc.py",
     "src/tomotwin_analysis.py",
     "src/tomotwin_umap.py",
+    "src/show_napari.py",
     "src/auto-cryoet-workflow.py",
 ]
